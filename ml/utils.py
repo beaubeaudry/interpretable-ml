@@ -1,5 +1,18 @@
 import polars as pl
 import polars.selectors as cs
+from sklearn.model_selection import train_test_split
+
+def unique_dates(df : pl.DataFrame) -> list[int]:
+    return df.select(pl.col('date').unique().sort()).to_series().to_list()
+
+def by_date(df: pl.DataFrame, dates : list[int]) -> pl.DataFrame:
+    return df.filter(pl.col('date').is_in(dates))
+
+def train_holdout_dates(df: pl.DataFrame, test_size=0.2, seed=1):
+    """Split data into train and holdout. Train can be further split."""
+    dates_unique = unique_dates(df)
+    train_dates, holdout_dates = train_test_split(dates_unique, test_size=test_size, random_state=seed, shuffle=False)
+    return train_dates, holdout_dates
 
 def get_corr(df) -> pl.DataFrame:
     # Numeric columns only
