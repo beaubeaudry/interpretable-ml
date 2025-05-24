@@ -2,6 +2,10 @@ import polars as pl
 import polars.selectors as cs
 from sklearn.model_selection import train_test_split
 
+def by_date_str(df, date : str) -> pl.DataFrame:
+    """E.g. '2024-01-02'"""
+    return df.filter(pl.col("date").dt.strftime('%Y-%m-%d') == date)
+
 def unique_dates(df : pl.DataFrame) -> list[int]:
     return df.select(pl.col('date').unique().sort()).to_series().to_list()
 

@@ -1,4 +1,6 @@
+data/
 *.parquet
+*.pkl
 
 # Python-generated files
 __pycache__/

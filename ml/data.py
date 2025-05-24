@@ -1,5 +1,11 @@
 import polars as pl
 
+def add_last_close_pct(df) -> pl.DataFrame:
+    """Difference between close now and close at end of series as a fractional percent."""
+    df = df.with_columns(
+        ((pl.col("close").last() - pl.col("close"))/pl.col("close")).over('symbol').alias("last_close_pct")
+    )
+    return df
 
 def add_max_forward_return(df) -> pl.DataFrame:
     """
@@ -18,15 +24,15 @@ def add_max_forward_return(df) -> pl.DataFrame:
 
 def load_spy_sample(months: list[int] = [1]) -> pl.DataFrame:
     df = load_spy()
-    df = df.filter(pl.col("month").is_in(months))
+    df = df.filter(pl.col("date").dt.month().is_in(months))
     return df
 
 def load_spy() -> pl.DataFrame:
     df = pl.read_parquet("./data/spy_2024.parquet")
-    df = add_max_forward_return(df)
-    cols = ['symbol', 'date', 'month', 'option_type','close', 'minute_index', 'close_moneyness', 'max_forward_return']
+    #df = add_max_forward_return(df)
+    cols = ['symbol', 'date', 'option_type', 'strike', 'close', 'minute_index', 'moneyness', 'close_underlying']
     df = df[cols]
-    df = df.drop_nulls(subset='max_forward_return')
+    df = df.sort('date', 'minute_index')
     return df
 
 def load_bike() -> pl.DataFrame:
@@ -49,3 +55,20 @@ def load_penguins() -> pl.DataFrame:
 
     penguins = penguins.drop('rowid', 'year')
     return penguins
+
+
+def load_vix() -> pl.DataFrame:
+    vix = pl.read_csv("./data/VIX_History.csv")
+    vix = vix.with_columns(pl.col("DATE").str.strptime(pl.Date, "%m/%d/%Y").alias("DATE"))
+    vix = vix.rename({col: col.lower() for col in vix.columns})
+    vix = vix.filter(pl.col("date").dt.year() >= 2023)
+
+    vix = vix.with_columns([
+        pl.col("high").shift(1).alias("prev_high"),
+        pl.col("low").shift(1).alias("prev_low"),
+        pl.col("close").shift(1).alias("prev_close")
+    ]).drop('high', 'low', 'close')
+
+    vix = vix.rename({col: f"vix_{col}" for col in vix.columns if col != 'date'})
+
+    return vix
